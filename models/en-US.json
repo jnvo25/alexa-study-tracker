@@ -1,31 +1,45 @@
 {
   "interactionModel": {
-    "languageModel": {
-      "invocationName": "my study",
-      "intents": [
-        {
-          "name": "AMAZON.CancelIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.HelpIntent",
-          "samples": []
-        },
-        {
-          "name": "AMAZON.StopIntent",
-          "samples": []
-        },
-        {
-          "name": "HelloWorldIntent",
-          "samples": [
-            "hello"
-          ]
-        },
-        {
-          "name": "AMAZON.NavigateHomeIntent",
-          "samples": []
-        }
-      ]
-    }
+      "languageModel": {
+          "invocationName": "my study",
+          "intents": [
+              {
+                  "name": "AMAZON.CancelIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.HelpIntent",
+                  "samples": []
+              },
+              {
+                  "name": "AMAZON.StopIntent",
+                  "samples": []
+              },
+              {
+                  "name": "HelloWorldIntent",
+                  "slots": [],
+                  "samples": [
+                      "hello"
+                  ]
+              },
+              {
+                  "name": "AMAZON.NavigateHomeIntent",
+                  "samples": []
+              },
+              {
+                  "name": "StartSessionIntent",
+                  "slots": [],
+                  "samples": [
+                      "I'm studying",
+                      "I am studying",
+                      "I'm starting",
+                      "I am starting",
+                      "begin session",
+                      "start session"
+                  ]
+              }
+          ],
+          "types": []
+      }
   }
 }
