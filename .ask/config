@@ -1,0 +1,33 @@
+{
+  "deploy_settings": {
+    "default": {
+      "skill_id": "amzn1.ask.skill.d0a3fe35-ad6e-4a04-b779-1a2f65442549",
+      "was_cloned": true,
+      "merge": {},
+      "resources": {
+        "manifest": {
+          "eTag": "dce590a8c2fde06416c4381e3ef5e85c"
+        },
+        "interactionModel": {
+          "en-US": {
+            "eTag": "7ff498bc2f24760e9350ca5717cc8789"
+          }
+        },
+        "lambda": [
+          {
+            "arn": "arn:aws:lambda:us-east-1:159178699233:function:ask-custom-my-study-default",
+            "awsRegion": "us-east-1",
+            "functionName": "ask-custom-my-study-default",
+            "alexaUsage": [
+              "custom/default"
+            ],
+            "revisionId": "29a68d78-6845-4091-bf53-8dd2cc671ae0",
+            "codeUri": "lambda/us-east-1_ask-custom-my-study-default",
+            "handler": "index.handler",
+            "runtime": "nodejs8.10"
+          }
+        ]
+      }
+    }
+  }
+}
