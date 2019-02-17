@@ -45,18 +45,23 @@ const StartSessionIntentHandler = {
     const moment = require('moment');
     const start = moment().format("X");
 
-    // TODO:: CHECK AND DENY IF START TIME ALREADY EXISTS
-
-    // Write to file
+    // Get or create attributes
     const attributesManager = handlerInput.attributesManager;
-    const attributes = {};
-    attributes.startTime = start;
-    attributesManager.setPersistentAttributes(attributes);
-    await attributesManager.savePersistentAttributes();
-
+    const attributes = await attributesManager.getPersistentAttributes() || {};
+    // Check and deny if start time already exists
+    var speechText;
+    if(attributes.startTime) {
+      speechText = "There is already a session active.";
+      // TODO:: DO YOU WANT TO CANCEL IT?
+    } else {
+      // Write to file
+      attributes.startTime = start;
+      attributesManager.setPersistentAttributes(attributes);
+      await attributesManager.savePersistentAttributes();
+      speechText = "Okay, study session, starting now";
+    }
     // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
     
-    const speechText = "Okay, study session, starting now"
 
     return handlerInput.responseBuilder
       .speak(speechText)
