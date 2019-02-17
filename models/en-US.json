@@ -16,20 +16,21 @@
                     "samples": []
                 },
                 {
-                    "name": "HelloWorldIntent",
-                    "slots": [],
-                    "samples": [
-                        "hello"
-                    ]
-                },
-                {
                     "name": "AMAZON.NavigateHomeIntent",
                     "samples": []
                 },
                 {
                     "name": "StartSessionIntent",
-                    "slots": [],
+                    "slots": [
+                        {
+                            "name": "subject",
+                            "type": "Subjects"
+                        }
+                    ],
                     "samples": [
+                        "I'm starting {subject}",
+                        "start a {subject} session",
+                        "I am going to study {subject}",
                         "I'm studying",
                         "I am studying",
                         "I'm starting",
@@ -40,8 +41,19 @@
                 },
                 {
                     "name": "StopSessionIntent",
-                    "slots": [],
+                    "slots": [
+                        {
+                            "name": "subject",
+                            "type": "Subjects"
+                        }
+                    ],
                     "samples": [
+                        "I finished all my {subject} homework",
+                        "I'm done with {subject}",
+                        "I'm finished with {subject}",
+                        "I finished studying {subject}",
+                        "I'm done studying {subject}",
+                        "I am done studying {subject}",
                         "I am done studying",
                         "I'm done studying",
                         "end this session",
@@ -51,17 +63,54 @@
                     ]
                 }
             ],
-            "types": []
+            "types": [
+                {
+                    "name": "Subjects",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "Programming"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Field Botany"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Calculus"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Linear Algebra"
+                            }
+                        }
+                    ]
+                }
+            ]
         },
         "dialog": {
             "intents": [
                 {
                     "name": "StopSessionIntent",
+                    "delegationStrategy": "SKILL_RESPONSE",
                     "confirmationRequired": true,
                     "prompts": {
-                        "confirmation": "Confirm.Intent.1427800132112"
+                        "confirmation": "Confirm.Intent.301979733041"
                     },
-                    "slots": []
+                    "slots": [
+                        {
+                            "name": "subject",
+                            "type": "Subjects",
+                            "confirmationRequired": false,
+                            "elicitationRequired": true,
+                            "prompts": {
+                                "elicitation": "Elicit.Slot.240142757063.1227245718713"
+                            }
+                        }
+                    ]
                 }
             ],
             "delegationStrategy": "ALWAYS"
@@ -81,6 +130,45 @@
                     {
                         "type": "PlainText",
                         "value": "Are you sure you want to end your session?"
+                    }
+                ]
+            },
+            {
+                "id": "Elicit.Slot.240142757063.1227245718713",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "What were you studying?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "What subject were you studying?"
+                    }
+                ]
+            },
+            {
+                "id": "Confirm.Slot.301979733041.1459125589038",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure you want to end your session?"
+                    }
+                ]
+            },
+            {
+                "id": "Confirm.Intent.301979733041",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure you want to end your current session?"
                     }
                 ]
             }

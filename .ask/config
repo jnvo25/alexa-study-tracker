@@ -10,7 +10,7 @@
         },
         "interactionModel": {
           "en-US": {
-            "eTag": "a7e1dadeb28cd41063d72866e47a85fb"
+            "eTag": "f42cf120cb3361bbf42496273c8c01f7"
           }
         },
         "lambda": [
@@ -23,7 +23,7 @@
             "codeUri": "lambda/us-east-1_ask-custom-my-study-default",
             "functionName": "ask-custom-my-study-default",
             "handler": "index.handler",
-            "revisionId": "1e475e1d-f9fb-467c-8499-32530e309e6a",
+            "revisionId": "e721ab8c-0a2d-449e-9565-0338c1238a2b",
             "runtime": "nodejs8.10"
           }
         ]

@@ -25,7 +25,7 @@ const StartSessionIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'StartSessionIntent';
   },
   async handle(handlerInput) {
-    
+
     // Retrieve UNIX
     const moment = require('moment');
     const start = moment().format("X");
@@ -39,6 +39,8 @@ const StartSessionIntentHandler = {
       speechText = "There is already a session active.";
       // TODO:: DO YOU WANT TO CANCEL IT?
     } else {
+      // Check if user provided session subject
+      attributes.subject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
       // Write to file
       attributes.startTime = start;
       attributesManager.setPersistentAttributes(attributes);
@@ -60,13 +62,28 @@ const StopSessionIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'StopSessionIntent';
   },
   async handle(handlerInput) {
-    
-    // Check confirmation
-    if(handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED') {
+        
+    // Get or create attributes
+    const attributesManager = handlerInput.attributesManager;
+    const attributes = await attributesManager.getPersistentAttributes() || {};
+
+    // Check if there is session active
+    if(!attributes.startTime) {
+      const speechText = "You have no active sessions."
       return handlerInput.responseBuilder
-        .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
+        .speak(speechText)
+        .withSimpleCard('My Studies', speechText)
         .getResponse();
-    } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus == 'DENIED') {
+    }
+
+    // Check confirmation
+    if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
+      return handlerInput.responseBuilder
+        .speak("Are you sure you want to end your current session?")
+        .reprompt("Are you sure?")
+        .addConfirmIntentDirective()
+        .getResponse();
+    } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
       const speechText = "Request cancelled, your study session is still active.";
       return handlerInput.responseBuilder
         .speak(speechText)
@@ -78,30 +95,27 @@ const StopSessionIntentHandler = {
     const moment = require('moment');
     const stop = moment().format("X");
 
-    // Get or create attributes
-    const attributesManager = handlerInput.attributesManager;
-    const attributes = await attributesManager.getPersistentAttributes() || {};
-    
-    // Check if start time exists otherwise deny
-    var speechText;
-    if(attributes.startTime) {
-      // Calculate time studied
-      const studyTime = stop - attributes.startTime;
-      // Write to file
-      if(attributes.studyTime) {
-        attributes.studyTime += studyTime;
-      } else {
-        attributes.studyTime = studyTime;
-      }
-      // Reset start time
-      attributes.startTime = null;
-      attributesManager.setPersistentAttributes(attributes);
-      await attributesManager.savePersistentAttributes();
-      speechText = `Okay, stopping your current study session. You have been studying for ${(studyTime>60) ? studyTime/60+ " minutes" : studyTime + " seconds"}.`;
-    } else {
-      speechText = "You have no active sesssions.";
-      // TODO:: "WOULD YOU LIKE TO START ONE?"
+    // Check if session subject exists and prompt
+    if(!attributes.subject && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
+      return handlerInput.responseBuilder
+        .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
+        .getResponse();
     }
+    attributes.subject = attributes.subject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
+
+    // Calculate time studied
+    const studyTime = stop - attributes.startTime;
+    // Write to file
+    if(attributes.studyTime) {
+      attributes.studyTime += studyTime;
+    } else {
+      attributes.studyTime = studyTime;
+    }
+    // Reset start time
+    attributes.startTime = null;
+    attributesManager.setPersistentAttributes(attributes);
+    await attributesManager.savePersistentAttributes();
+    const speechText = `Okay, stopping your current study session. You have been studying ${attributes.subject} for ${(studyTime>60) ? studyTime/60+ " minutes" : studyTime + " seconds"}.`;
 
     return handlerInput.responseBuilder
       .speak(speechText)
