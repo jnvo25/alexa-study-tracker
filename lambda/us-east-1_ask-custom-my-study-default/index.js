@@ -61,6 +61,19 @@ const StopSessionIntentHandler = {
   },
   async handle(handlerInput) {
     
+    // Check confirmation
+    if(handlerInput.requestEnvelope.request.dialogState !== 'COMPLETED') {
+      return handlerInput.responseBuilder
+        .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
+        .getResponse();
+    } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus == 'DENIED') {
+      const speechText = "Request cancelled, your study session is still active.";
+      return handlerInput.responseBuilder
+        .speak(speechText)
+        .withSimpleCard('My Studies', speechText)
+        .getResponse();
+    }
+
     // Retrieve UNIX
     const moment = require('moment');
     const stop = moment().format("X");

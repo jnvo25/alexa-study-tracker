@@ -52,6 +52,38 @@
                 }
             ],
             "types": []
-        }
+        },
+        "dialog": {
+            "intents": [
+                {
+                    "name": "StopSessionIntent",
+                    "confirmationRequired": true,
+                    "prompts": {
+                        "confirmation": "Confirm.Intent.1427800132112"
+                    },
+                    "slots": []
+                }
+            ],
+            "delegationStrategy": "ALWAYS"
+        },
+        "prompts": [
+            {
+                "id": "Confirm.Intent.1427800132112",
+                "variations": [
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure about that?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure you want to stop?"
+                    },
+                    {
+                        "type": "PlainText",
+                        "value": "Are you sure you want to end your session?"
+                    }
+                ]
+            }
+        ]
     }
 }
