@@ -33,6 +33,38 @@ const HelloWorldIntentHandler = {
   },
 };
 
+// Record time starting and save into attributes
+const StartSessionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'StartSessionIntent';
+  },
+  async handle(handlerInput) {
+    
+    // Retrieve UNIX
+    const moment = require('moment');
+    const start = moment().format("X");
+
+    // TODO:: CHECK AND DENY IF START TIME ALREADY EXISTS
+
+    // Write to file
+    const attributesManager = handlerInput.attributesManager;
+    const attributes = {};
+    attributes.startTime = start;
+    attributesManager.setPersistentAttributes(attributes);
+    await attributesManager.savePersistentAttributes();
+
+    // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
+    
+    const speechText = "Okay, study session, starting now"
+
+    return handlerInput.responseBuilder
+      .speak(speechText)
+      .withSimpleCard('My Studies', speechText)
+      .getResponse();
+  },
+};
+
 const HelpIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -96,6 +128,7 @@ exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequestHandler,
     HelloWorldIntentHandler,
+    StartSessionIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler
