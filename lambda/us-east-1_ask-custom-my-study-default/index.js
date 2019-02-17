@@ -18,21 +18,6 @@ const LaunchRequestHandler = {
   },
 };
 
-const HelloWorldIntentHandler = {
-  canHandle(handlerInput) {
-    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-      && handlerInput.requestEnvelope.request.intent.name === 'HelloWorldIntent';
-  },
-  handle(handlerInput) {
-    const speechText = 'Hello World!';
-
-    return handlerInput.responseBuilder
-      .speak(speechText)
-      .withSimpleCard('Hello World', speechText)
-      .getResponse();
-  },
-};
-
 // Record time starting and save into attributes
 const StartSessionIntentHandler = {
   canHandle(handlerInput) {
@@ -61,7 +46,49 @@ const StartSessionIntentHandler = {
       speechText = "Okay, study session, starting now";
     }
     // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
+
+    return handlerInput.responseBuilder
+      .speak(speechText)
+      .withSimpleCard('My Studies', speechText)
+      .getResponse();
+  },
+};
+
+const StopSessionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'StopSessionIntent';
+  },
+  async handle(handlerInput) {
     
+    // Retrieve UNIX
+    const moment = require('moment');
+    const stop = moment().format("X");
+
+    // Get or create attributes
+    const attributesManager = handlerInput.attributesManager;
+    const attributes = await attributesManager.getPersistentAttributes() || {};
+    
+    // Check if start time exists otherwise deny
+    var speechText;
+    if(attributes.startTime) {
+      // Calculate time studied
+      const studyTime = stop - attributes.startTime;
+      // Write to file
+      if(attributes.studyTime) {
+        attributes.studyTime += studyTime;
+      } else {
+        attributes.studyTime = studyTime;
+      }
+      // Reset start time
+      attributes.startTime = null;
+      attributesManager.setPersistentAttributes(attributes);
+      await attributesManager.savePersistentAttributes();
+      speechText = `Okay, stopping your current study session. You have been studying for ${(studyTime>60) ? studyTime/60+ " minutes" : studyTime + " seconds"}.`;
+    } else {
+      speechText = "You have no active sesssions.";
+      // TODO:: "WOULD YOU LIKE TO START ONE?"
+    }
 
     return handlerInput.responseBuilder
       .speak(speechText)
@@ -132,8 +159,8 @@ const skillBuilder = Alexa.SkillBuilders.standard();
 exports.handler = skillBuilder
   .addRequestHandlers(
     LaunchRequestHandler,
-    HelloWorldIntentHandler,
     StartSessionIntentHandler,
+    StopSessionIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler
