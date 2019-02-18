@@ -33,6 +33,7 @@ const StartSessionIntentHandler = {
     // Get or create attributes
     const attributesManager = handlerInput.attributesManager;
     const attributes = await attributesManager.getPersistentAttributes() || {};
+    
     // Check and deny if start time already exists
     var speechText;
     if(attributes.startTime) {
@@ -40,12 +41,16 @@ const StartSessionIntentHandler = {
       // TODO:: DO YOU WANT TO CANCEL IT?
     } else {
       // Check if user provided session subject
-      attributes.subject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
+      attributes.currentSubject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
       // Write to file
       attributes.startTime = start;
       attributesManager.setPersistentAttributes(attributes);
       await attributesManager.savePersistentAttributes();
-      speechText = "Okay, study session, starting now";
+      if(attributes.currentSubject != null) {
+        speechText = `Okay, study session for ${attributes.currentSubject}, starting now`;
+      } else {
+        speechText = `Okay, starting your study session, now`;
+      }
     }
     // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
 
@@ -96,27 +101,43 @@ const StopSessionIntentHandler = {
     const stop = moment().format("X");
 
     // Check if session subject exists and prompt
-    if(!attributes.subject && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
+    if(attributes.currentSubject == null && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
       return handlerInput.responseBuilder
         .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
         .getResponse();
     }
-    attributes.subject = attributes.subject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
-
+    attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
+    
     // Calculate time studied
     const studyTime = stop - attributes.startTime;
-    // Write to file
-    if(attributes.studyTime) {
-      attributes.studyTime += studyTime;
-    } else {
-      attributes.studyTime = studyTime;
+
+    // Create history array in attributes if nonexistent
+    attributes.history = attributes.history || [];
+    // Check if current subject has been studied before and create if new
+    var index = attributes.history.findIndex(x => x.subjectName == attributes.currentSubject);
+    if(index == -1) {
+      // Subject record to hold time
+      const record = {
+        subjectName: attributes.currentSubject,
+        totalTime: 0
+      }
+      attributes.history.push(record);
+      index = attributes.history.length-1;
     }
-    // Reset start time
+    // Attach time
+    attributes.history[index].totalTime += studyTime; 
+
+    // Create speech text
+    const speechText = `Okay, stopping your current study session. You have been studying ${attributes.currentSubject} for ${(studyTime>60) ? studyTime/60+ " minutes" : studyTime + " seconds"}.`;
+
+    // Reset current statistics
     attributes.startTime = null;
+    attributes.currentSubject = null;
+
+    // Save attributes
     attributesManager.setPersistentAttributes(attributes);
     await attributesManager.savePersistentAttributes();
-    const speechText = `Okay, stopping your current study session. You have been studying ${attributes.subject} for ${(studyTime>60) ? studyTime/60+ " minutes" : studyTime + " seconds"}.`;
-
+    
     return handlerInput.responseBuilder
       .speak(speechText)
       .withSimpleCard('My Studies', speechText)
