@@ -8,12 +8,12 @@ const LaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   handle(handlerInput) {
-    const speechText = 'Welcome to the Alexa Skills Kit, you can say hello!';
+    const speechText = 'Welcome to My Studies, lets get to studying!';
 
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt(speechText)
-      .withSimpleCard('Hello World', speechText)
+      .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
 };
@@ -128,7 +128,7 @@ const StopSessionIntentHandler = {
     attributes.history[index].totalTime += studyTime; 
 
     // Create speech text
-    const speechText = `Okay, stopping your current study session. You have been studying ${attributes.currentSubject} for ${(studyTime>60) ? studyTime/60+ " minutes" : studyTime + " seconds"}.`;
+    const speechText = `Okay, stopping your current study session. You have been studying ${attributes.currentSubject} for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`;
 
     // Reset current statistics
     attributes.startTime = null;
@@ -138,6 +138,54 @@ const StopSessionIntentHandler = {
     attributesManager.setPersistentAttributes(attributes);
     await attributesManager.savePersistentAttributes();
     
+    return handlerInput.responseBuilder
+      .speak(speechText)
+      .withSimpleCard('My Studies', speechText)
+      .getResponse();
+  },
+};
+
+const GetRecordsIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'GetRecordsIntent';
+  },
+  async handle(handlerInput) {
+        
+    // Get or create attributes
+    const attributesManager = handlerInput.attributesManager;
+    const attributes = await attributesManager.getPersistentAttributes() || null;
+
+    // Check if attributes empty
+    if(attributes == null || !attributes.history) {
+        const speechText = "You have not started a study session yet.";
+        return handlerInput.responseBuilder
+            .speak(speechText)
+            .withSimpleCard('My Studies', speechText)
+            .getResponse();
+    }
+
+    var speechText = "";
+    if(handlerInput.requestEnvelope.request.intent.slots.subject.value) {
+        var index = attributes.history.findIndex(x => x.subjectName == handlerInput.requestEnvelope.request.intent.slots.subject.value); // TODO:: variablize handler value
+        if(index == -1) {
+            speechText += `You haven't studied ${handlerInput.requestEnvelope.request.intent.slots.subject.value} yet.`;
+        } else {
+            const record = attributes.history[index];
+            speechText += `You studied ${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`;
+        }
+    } else {
+        speechText += "You have studied "
+        for(var i=0; i<attributes.history.length; i++) {
+          const record = attributes.history[i];  
+          if(i == attributes.history.length-2) {
+              speechText += `${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}, and `; // TODO:: combine with 184 in ternary operator
+          } else {
+              speechText += `${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}, `;
+          }
+        }
+    }
+  
     return handlerInput.responseBuilder
       .speak(speechText)
       .withSimpleCard('My Studies', speechText)
@@ -209,6 +257,7 @@ exports.handler = skillBuilder
     LaunchRequestHandler,
     StartSessionIntentHandler,
     StopSessionIntentHandler,
+    GetRecordsIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler

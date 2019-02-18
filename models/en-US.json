@@ -1,7 +1,7 @@
 {
     "interactionModel": {
         "languageModel": {
-            "invocationName": "my study",
+            "invocationName": "my studies",
             "intents": [
                 {
                     "name": "AMAZON.CancelIntent",
@@ -61,6 +61,29 @@
                         "end session",
                         "stop my session",
                         "stop session"
+                    ]
+                },
+                {
+                    "name": "GetRecordsIntent",
+                    "slots": [
+                        {
+                            "name": "subject",
+                            "type": "Subjects"
+                        }
+                    ],
+                    "samples": [
+                        "tell me how long I studied {subject}",
+                        "tell me my history",
+                        "how long have I studied {subject}",
+                        "give me my session history",
+                        "give me my records",
+                        "what are my sessions",
+                        "what is my history",
+                        "list my history",
+                        "what are my records",
+                        "list my records",
+                        "what have I studied",
+                        "list my sessions"
                     ]
                 }
             ],
