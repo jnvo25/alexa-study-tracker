@@ -1,7 +1,7 @@
 {
     "interactionModel": {
         "languageModel": {
-            "invocationName": "my studies",
+            "invocationName": "me",
             "intents": [
                 {
                     "name": "AMAZON.CancelIntent",
@@ -162,11 +162,11 @@
                 "variations": [
                     {
                         "type": "PlainText",
-                        "value": "What were you studying?"
+                        "value": "Mimi wants to know what you were studying. What have you been working on?"
                     },
                     {
                         "type": "PlainText",
-                        "value": "What subject were you studying?"
+                        "value": "Mimi asks, what subject were you studying?"
                     }
                 ]
             },

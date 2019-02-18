@@ -3,12 +3,17 @@
 
 const Alexa = require('ask-sdk');
 
+function toSSML (phrase) {
+  return `<voice name="Mizuki"><lang xml:lang="ja-JP"><prosody pitch="+18%">${phrase}</prosody></lang></voice>`;
+}
+
 const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   handle(handlerInput) {
-    const speechText = 'Welcome to My Studies, lets get to studying!';
+    // Hello, I am Mimi. What can I do for you?
+    const speechText = toSSML('こんにちは、私はMimiです。どういうご用件ですか？');
 
     return handlerInput.responseBuilder
       .speak(speechText)
@@ -37,7 +42,9 @@ const StartSessionIntentHandler = {
     // Check and deny if start time already exists
     var speechText;
     if(attributes.startTime) {
-      speechText = "There is already a session active.";
+      
+      // I cannot. There is already an active session.
+      speechText = toSSML("私はできない. There is already a active session.");
       // TODO:: DO YOU WANT TO CANCEL IT?
     } else {
       // Check if user provided session subject
@@ -47,9 +54,11 @@ const StartSessionIntentHandler = {
       attributesManager.setPersistentAttributes(attributes);
       await attributesManager.savePersistentAttributes();
       if(attributes.currentSubject != null) {
-        speechText = `Okay, study session for ${attributes.currentSubject}, starting now`;
+        // Okay study session for {subject} starting now
+        speechText = toSSML(`大丈夫、study session for ${attributes.currentSubject}, starting now`);
       } else {
-        speechText = `Okay, starting your study session, now`;
+        // Okay, study session, starting now
+        speechText = toSSML("はい,勉強会, starting now.");
       }
     }
     // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
@@ -74,7 +83,8 @@ const StopSessionIntentHandler = {
 
     // Check if there is session active
     if(!attributes.startTime) {
-      const speechText = "You have no active sessions."
+      // You have no active sessions
+      const speechText = toSSML("active session が ありません.");
       return handlerInput.responseBuilder
         .speak(speechText)
         .withSimpleCard('My Studies', speechText)
@@ -84,12 +94,13 @@ const StopSessionIntentHandler = {
     // Check confirmation
     if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
       return handlerInput.responseBuilder
-        .speak("Are you sure you want to end your current session?")
+        .speak(toSSML("Are you sure you want to stop?"))
         .reprompt("Are you sure?")
         .addConfirmIntentDirective()
         .getResponse();
     } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
-      const speechText = "Request cancelled, your study session is still active.";
+      // Okay, I won't cancel.
+      const speechText = toSSML("はい. I won't cancel.");
       return handlerInput.responseBuilder
         .speak(speechText)
         .withSimpleCard('My Studies', speechText)
@@ -128,7 +139,8 @@ const StopSessionIntentHandler = {
     attributes.history[index].totalTime += studyTime; 
 
     // Create speech text
-    const speechText = `Okay, stopping your current study session. You have been studying ${attributes.currentSubject} for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`;
+    // Okay I will stop the session
+    const speechText = toSSML("はい, セッションを中止します.") + `According to Mimi, you have been studying ${attributes.currentSubject} for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`;
 
     // Reset current statistics
     attributes.startTime = null;
@@ -158,7 +170,7 @@ const GetRecordsIntentHandler = {
 
     // Check if attributes empty
     if(attributes == null || !attributes.history) {
-        const speechText = "You have not started a study session yet.";
+        const speechText = "Mimi said you have not started a study session yet.";
         return handlerInput.responseBuilder
             .speak(speechText)
             .withSimpleCard('My Studies', speechText)
@@ -169,13 +181,13 @@ const GetRecordsIntentHandler = {
     if(handlerInput.requestEnvelope.request.intent.slots.subject.value) {
         var index = attributes.history.findIndex(x => x.subjectName == handlerInput.requestEnvelope.request.intent.slots.subject.value); // TODO:: variablize handler value
         if(index == -1) {
-            speechText += `You haven't studied ${handlerInput.requestEnvelope.request.intent.slots.subject.value} yet.`;
+            speechText += `Mimi said you haven't studied ${handlerInput.requestEnvelope.request.intent.slots.subject.value} yet.`;
         } else {
             const record = attributes.history[index];
-            speechText += `You studied ${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`;
+            speechText += `According to Mimi, you studied ${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`;
         }
     } else {
-        speechText += "You have studied "
+        speechText += "According to Mimi, you have studied "
         for(var i=0; i<attributes.history.length; i++) {
           const record = attributes.history[i];  
           if(i == attributes.history.length-2) {
@@ -216,7 +228,7 @@ const CancelAndStopIntentHandler = {
         || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent');
   },
   handle(handlerInput) {
-    const speechText = 'Goodbye!';
+    const speechText = toSSML("バイバイ");
 
     return handlerInput.responseBuilder
       .speak(speechText)
@@ -244,7 +256,7 @@ const ErrorHandler = {
     console.log(`Error handled: ${error.message}`);
 
     return handlerInput.responseBuilder
-      .speak('Sorry, I can\'t understand the command. Please say again.')
+      .speak(toSSML('Sorry, I can\'t understand the command. Please say again.'))
       .reprompt('Sorry, I can\'t understand the command. Please say again.')
       .getResponse();
   },
