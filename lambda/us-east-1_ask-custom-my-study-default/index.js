@@ -84,7 +84,7 @@ const StopSessionIntentHandler = {
     // Check if there is session active
     if(!attributes.startTime) {
       // You have no active sessions
-      const speechText = toSSML("active session が ありません.");
+      const speechText = toSSML("Active session not found.");
       return handlerInput.responseBuilder
         .speak(speechText)
         .withSimpleCard('My Studies', speechText)
@@ -94,13 +94,13 @@ const StopSessionIntentHandler = {
     // Check confirmation
     if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
       return handlerInput.responseBuilder
-        .speak(toSSML("Are you sure you want to stop?"))
-        .reprompt("Are you sure?")
+        .speak(toSSML("You sure you want to stop?"))
+        .reprompt(toSSML("Are you sure?"))
         .addConfirmIntentDirective()
         .getResponse();
     } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
       // Okay, I won't cancel.
-      const speechText = toSSML("はい. I won't cancel.");
+      const speechText = toSSML("はい.");
       return handlerInput.responseBuilder
         .speak(speechText)
         .withSimpleCard('My Studies', speechText)
@@ -205,6 +205,39 @@ const GetRecordsIntentHandler = {
   },
 };
 
+const CurrentSessionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'CurrentSessionIntent';
+  },
+  async handle(handlerInput) {
+    // Get or create attributes
+    const attributesManager = handlerInput.attributesManager;
+    const attributes = await attributesManager.getPersistentAttributes() || null;
+
+    // Check if there is session active
+    var speechText = "";
+    if(attributes.startTime) {
+      // Retrieve UNIX
+      const moment = require('moment');
+      const currentSession = moment().format("X") - attributes.startTime;
+      if(attributes.currentSubject) {
+        speechText = `According to Mimi, You have been studying ${attributes.currentSubject} for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`;
+      } else {
+        speechText = `According to Mimi, You have been studying for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`;
+      }
+    } else {
+      // You have no active sessions
+      speechText = toSSML("Active session not found.");
+    }
+
+    return handlerInput.responseBuilder
+      .speak(speechText)
+      .withSimpleCard('My Studies', speechText)
+      .getResponse();
+  },
+};
+
 const HelpIntentHandler = {
   canHandle(handlerInput) {
     return handlerInput.requestEnvelope.request.type === 'IntentRequest'
@@ -270,6 +303,7 @@ exports.handler = skillBuilder
     StartSessionIntentHandler,
     StopSessionIntentHandler,
     GetRecordsIntentHandler,
+    CurrentSessionIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler

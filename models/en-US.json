@@ -85,6 +85,19 @@
                         "what have I studied",
                         "list my sessions"
                     ]
+                },
+                {
+                    "name": "CurrentSessionIntent",
+                    "slots": [],
+                    "samples": [
+                        "is there a current session",
+                        "is there an active session",
+                        "what am I studying",
+                        "how long have I been studying",
+                        "what is my current session",
+                        "what have I been studying",
+                        "what am I studying right now"
+                    ]
                 }
             ],
             "types": [
