@@ -1,7 +1,7 @@
 {
     "interactionModel": {
         "languageModel": {
-            "invocationName": "me",
+            "invocationName": "amy",
             "intents": [
                 {
                     "name": "AMAZON.CancelIntent",
@@ -97,6 +97,15 @@
                         "what is my current session",
                         "what have I been studying",
                         "what am I studying right now"
+                    ]
+                },
+                {
+                    "name": "CancelSessionIntent",
+                    "slots": [],
+                    "samples": [
+                        "cancel my current session",
+                        "cancel session",
+                        "erase my current session"
                     ]
                 }
             ],

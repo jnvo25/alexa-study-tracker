@@ -4,7 +4,7 @@
 const Alexa = require('ask-sdk');
 
 function toSSML (phrase) {
-  return `<voice name="Mizuki"><lang xml:lang="ja-JP"><prosody pitch="+18%">${phrase}</prosody></lang></voice>`;
+  return `<voice name="Emma"><lang xml:lang="en-GB"><prosody pitch="+0%">${phrase}</prosody></lang></voice>`;
 }
 
 const LaunchRequestHandler = {
@@ -12,8 +12,7 @@ const LaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   handle(handlerInput) {
-    // Hello, I am Mimi. What can I do for you?
-    const speechText = toSSML('こんにちは、私はMimiです。どういうご用件ですか？');
+    const speechText = toSSML('Welcome back. What can I do for you today?');
 
     return handlerInput.responseBuilder
       .speak(speechText)
@@ -43,8 +42,7 @@ const StartSessionIntentHandler = {
     var speechText;
     if(attributes.startTime) {
       
-      // I cannot. There is already an active session.
-      speechText = toSSML("私はできない. There is already a active session.");
+      speechText = toSSML(`There is already a active session${(attributes.currentSubject) ? ` for ${attributes.currentSubject}` : ""}.`);
       // TODO:: DO YOU WANT TO CANCEL IT?
     } else {
       // Check if user provided session subject
@@ -54,11 +52,9 @@ const StartSessionIntentHandler = {
       attributesManager.setPersistentAttributes(attributes);
       await attributesManager.savePersistentAttributes();
       if(attributes.currentSubject != null) {
-        // Okay study session for {subject} starting now
-        speechText = toSSML(`大丈夫、study session for ${attributes.currentSubject}, starting now`);
+        speechText = toSSML(`Okay, study session for ${attributes.currentSubject}, starting now`);
       } else {
-        // Okay, study session, starting now
-        speechText = toSSML("はい,勉強会, starting now.");
+        speechText = toSSML("Okay, study session, starting now.");
       }
     }
     // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
@@ -99,8 +95,8 @@ const StopSessionIntentHandler = {
         .addConfirmIntentDirective()
         .getResponse();
     } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
-      // Okay, I won't cancel.
-      const speechText = toSSML("はい.");
+      // Okay
+      const speechText = toSSML("Okay, cancelling your request to end.");
       return handlerInput.responseBuilder
         .speak(speechText)
         .withSimpleCard('My Studies', speechText)
@@ -140,7 +136,8 @@ const StopSessionIntentHandler = {
 
     // Create speech text
     // Okay I will stop the session
-    const speechText = toSSML("はい, セッションを中止します.") + `According to Mimi, you have been studying ${attributes.currentSubject} for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`;
+    const speechText = toSSML(`Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
+                       for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`);
 
     // Reset current statistics
     attributes.startTime = null;
@@ -170,7 +167,7 @@ const GetRecordsIntentHandler = {
 
     // Check if attributes empty
     if(attributes == null || !attributes.history) {
-        const speechText = "Mimi said you have not started a study session yet.";
+        const speechText = toSSML("You have not started a study session yet.");
         return handlerInput.responseBuilder
             .speak(speechText)
             .withSimpleCard('My Studies', speechText)
@@ -178,23 +175,22 @@ const GetRecordsIntentHandler = {
     }
 
     var speechText = "";
-    if(handlerInput.requestEnvelope.request.intent.slots.subject.value) {
-        var index = attributes.history.findIndex(x => x.subjectName == handlerInput.requestEnvelope.request.intent.slots.subject.value); // TODO:: variablize handler value
+    const passedSubject = handlerInput.requestEnvelope.request.intent.slots.subject.value;
+    if(passedSubject) {
+        var index = attributes.history.findIndex(x => x.subjectName == passedSubject);
         if(index == -1) {
-            speechText += `Mimi said you haven't studied ${handlerInput.requestEnvelope.request.intent.slots.subject.value} yet.`;
+            speechText += toSSML(`You haven't studied ${passedSubject} yet.`);
         } else {
             const record = attributes.history[index];
-            speechText += `According to Mimi, you studied ${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`;
+            speechText += toSSML(`You studied ${record.subjectName} for \
+                            ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`);
         }
     } else {
-        speechText += "According to Mimi, you have studied "
+        speechText += toSSML("You have studied ");
         for(var i=0; i<attributes.history.length; i++) {
           const record = attributes.history[i];  
-          if(i == attributes.history.length-2) {
-              speechText += `${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}, and `; // TODO:: combine with 184 in ternary operator
-          } else {
-              speechText += `${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}, `;
-          }
+          speechText += toSSML(`${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}\
+                        ${(i != attributes.history.length-2) ? (i == attributes.history.length-1) ? '. ' : ', ' : ', and '}`);
         }
     }
   
@@ -221,15 +217,64 @@ const CurrentSessionIntentHandler = {
       // Retrieve UNIX
       const moment = require('moment');
       const currentSession = moment().format("X") - attributes.startTime;
-      if(attributes.currentSubject) {
-        speechText = `According to Mimi, You have been studying ${attributes.currentSubject} for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`;
-      } else {
-        speechText = `According to Mimi, You have been studying for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`;
-      }
+      speechText = toSSML(`You have been studying ${(attributes.currentSubject) ? attributes.currentSubject : ""}\
+                    for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`);
     } else {
       // You have no active sessions
       speechText = toSSML("Active session not found.");
     }
+
+    return handlerInput.responseBuilder
+      .speak(speechText)
+      .withSimpleCard('My Studies', speechText)
+      .getResponse();
+  },
+};
+
+const CancelSessionIntentHandler = {
+  canHandle(handlerInput) {
+    return handlerInput.requestEnvelope.request.type === 'IntentRequest'
+      && handlerInput.requestEnvelope.request.intent.name === 'CancelSessionIntent';
+  },
+  async handle(handlerInput) {
+
+    // Get or create attributes
+    const attributesManager = handlerInput.attributesManager;
+    const attributes = await attributesManager.getPersistentAttributes() || null;
+    
+    // Check if there is a current session
+    if(!attributes.startTime) {
+      return handlerInput.responseBuilder
+        .speak(toSSML("There is no active session to cancel."))
+        .withSimpleCard('My Studies', "There are no sessions to cancel.")
+        .getResponse();
+    }
+
+    // Confirm intent
+    if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
+      const speechText = `Are you sure you want to cancel your session${(attributes.currentSubject) ? ` for ${attributes.currentSubject}` : ""}?`;
+      return handlerInput.responseBuilder
+        .speak(toSSML(speechText))
+        .reprompt(toSSML("Are you sure you want to cancel?"))
+        .addConfirmIntentDirective()
+        .getResponse();
+    } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
+      const speechText = toSSML("Okay, I won't cancel your session.");
+      return handlerInput.responseBuilder
+        .speak(speechText)
+        .withSimpleCard('My Studies', speechText)
+        .getResponse();
+    }
+
+    // Reset current statistics
+    attributes.startTime = null;
+    attributes.currentSubject = null;
+
+    // Save attributes
+    attributesManager.setPersistentAttributes(attributes);
+    await attributesManager.savePersistentAttributes();
+
+    const speechText = toSSML("Okay, I cancelled your current session. You currently have no active sessions.");
 
     return handlerInput.responseBuilder
       .speak(speechText)
@@ -244,12 +289,15 @@ const HelpIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent';
   },
   handle(handlerInput) {
-    const speechText = 'You can say hello to me!';
+    const speechText = toSSML('I am your academic assistant. You can tell me to start, \
+                              stop, or cancel study sessions to keep track of your academic \
+                              pursuits. I can also tell your total study times if you ask \
+                              for your records.');
 
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt(speechText)
-      .withSimpleCard('Hello World', speechText)
+      .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
 };
@@ -261,11 +309,11 @@ const CancelAndStopIntentHandler = {
         || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent');
   },
   handle(handlerInput) {
-    const speechText = toSSML("バイバイ");
+    const speechText = toSSML("Bye bye");
 
     return handlerInput.responseBuilder
       .speak(speechText)
-      .withSimpleCard('Hello World', speechText)
+      .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
 };
@@ -304,6 +352,7 @@ exports.handler = skillBuilder
     StopSessionIntentHandler,
     GetRecordsIntentHandler,
     CurrentSessionIntentHandler,
+    CancelSessionIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler
