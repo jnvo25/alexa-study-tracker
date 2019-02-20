@@ -6,7 +6,7 @@
       "merge": {},
       "resources": {
         "manifest": {
-          "eTag": "dce590a8c2fde06416c4381e3ef5e85c"
+          "eTag": "b49587927864319685338c217142921e"
         },
         "interactionModel": {
           "en-US": {
@@ -23,7 +23,7 @@
             "codeUri": "lambda/us-east-1_ask-custom-my-study-default",
             "functionName": "ask-custom-my-study-default",
             "handler": "index.handler",
-            "revisionId": "57e6b5f0-d88b-4de1-80e2-67c7b6c9da34",
+            "revisionId": "3e7db1d0-62c6-4368-ae74-4dfb49164b8a",
             "runtime": "nodejs8.10"
           }
         ]

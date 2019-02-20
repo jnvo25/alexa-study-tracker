@@ -9,22 +9,30 @@
       }
     },
     "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "locales": {
+        "en-US": {}
+      }
+    },
     "publishingInformation": {
       "locales": {
         "en-US": {
-          "name": "my-study",
+          "name": "Eva: My Study Buddy",
           "summary": "Sample Short Description",
+          "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/6368/eeb209717b384d15a7e13822be0a8f16/APP_ICON?versionId=EoNP4c61i6cAI1JTYqTjieltneVF0oIe&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1550782944&Signature=2ispwX838zGnyFXh0ctwoIauKFc%3D",
+          "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/9735/15bd51d5d43644e0810193c0cbc96475/APP_ICON_LARGE?versionId=zcCZAY9GIpSHiieJ_eITaaVAcJiJAtja&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1550782944&Signature=yYLcShx2LaJGQYl55F0IQyzCsHk%3D",
           "description": "Sample Full Description",
           "examplePhrases": [
-            "Alexa open hello world",
-            "hello",
-            "help"
-          ]
+            "Ask Eva to start a study session",
+            "Ask Eva to end study session",
+            "Tell Eva to cancel study session"
+          ],
+          "keywords": []
         }
       },
       "isAvailableWorldwide": true,
       "testingInstructions": "Sample Testing Instructions.",
-      "category": "KNOWLEDGE_AND_TRIVIA",
+      "category": "EDUCATION_AND_REFERENCE",
       "distributionCountries": []
     }
   }
