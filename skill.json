@@ -18,9 +18,9 @@
       "locales": {
         "en-US": {
           "name": "Eva: My Study Buddy",
+          "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/6368/eeb209717b384d15a7e13822be0a8f16/APP_ICON?versionId=EoNP4c61i6cAI1JTYqTjieltneVF0oIe&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1550784545&Signature=D9tNz%2Bktu0dEAWuhCNIN1fuxcFA%3D",
+          "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/9735/15bd51d5d43644e0810193c0cbc96475/APP_ICON_LARGE?versionId=zcCZAY9GIpSHiieJ_eITaaVAcJiJAtja&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1550784545&Signature=f2I1InPDjoWsR1a0JmP73XYhSiA%3D",
           "summary": "Sample Short Description",
-          "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/6368/eeb209717b384d15a7e13822be0a8f16/APP_ICON?versionId=EoNP4c61i6cAI1JTYqTjieltneVF0oIe&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1550782944&Signature=2ispwX838zGnyFXh0ctwoIauKFc%3D",
-          "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/9735/15bd51d5d43644e0810193c0cbc96475/APP_ICON_LARGE?versionId=zcCZAY9GIpSHiieJ_eITaaVAcJiJAtja&AWSAccessKeyId=AKIAJFEYRBGIHK2BBYKA&Expires=1550782944&Signature=yYLcShx2LaJGQYl55F0IQyzCsHk%3D",
           "description": "Sample Full Description",
           "examplePhrases": [
             "Ask Eva to start a study session",

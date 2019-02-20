@@ -12,10 +12,10 @@ const LaunchRequestHandler = {
     return handlerInput.requestEnvelope.request.type === 'LaunchRequest';
   },
   handle(handlerInput) {
-    const speechText = toSSML('Welcome back. What can I do for you today?');
+    const speechText = 'Welcome back. What can I do for you today?';
 
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .reprompt(speechText)
       .withSimpleCard('My Studies', speechText)
       .getResponse();
@@ -42,7 +42,7 @@ const StartSessionIntentHandler = {
     var speechText;
     if(attributes.startTime) {
       
-      speechText = toSSML(`There is already a active session${(attributes.currentSubject) ? ` for ${attributes.currentSubject}` : ""}.`);
+      speechText = `There is already a active session${(attributes.currentSubject) ? ` for ${attributes.currentSubject}` : ""}.`;
       // TODO:: DO YOU WANT TO CANCEL IT?
     } else {
       // Check if user provided session subject
@@ -52,15 +52,15 @@ const StartSessionIntentHandler = {
       attributesManager.setPersistentAttributes(attributes);
       await attributesManager.savePersistentAttributes();
       if(attributes.currentSubject != null) {
-        speechText = toSSML(`Okay, study session for ${attributes.currentSubject}, starting now`);
+        speechText = `Okay, study session for ${attributes.currentSubject}, starting now`;
       } else {
-        speechText = toSSML("Okay, study session, starting now.");
+        speechText = "Okay, study session, starting now.";
       }
     }
     // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
 
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
@@ -79,10 +79,9 @@ const StopSessionIntentHandler = {
 
     // Check if there is session active
     if(!attributes.startTime) {
-      // You have no active sessions
-      const speechText = toSSML("Active session not found.");
+      const speechText = "Active session not found.";
       return handlerInput.responseBuilder
-        .speak(speechText)
+        .speak(toSSML(speechText))
         .withSimpleCard('My Studies', speechText)
         .getResponse();
     }
@@ -95,10 +94,9 @@ const StopSessionIntentHandler = {
         .addConfirmIntentDirective()
         .getResponse();
     } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
-      // Okay
-      const speechText = toSSML("Okay, cancelling your request to end.");
+      const speechText = "Okay, cancelling your request to end.";
       return handlerInput.responseBuilder
-        .speak(speechText)
+        .speak(toSSML(speechText))
         .withSimpleCard('My Studies', speechText)
         .getResponse();
     }
@@ -136,8 +134,8 @@ const StopSessionIntentHandler = {
 
     // Create speech text
     // Okay I will stop the session
-    const speechText = toSSML(`Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
-                       for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`);
+    const speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
+                       for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`;
 
     // Reset current statistics
     attributes.startTime = null;
@@ -148,7 +146,7 @@ const StopSessionIntentHandler = {
     await attributesManager.savePersistentAttributes();
     
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
@@ -167,9 +165,9 @@ const GetRecordsIntentHandler = {
 
     // Check if attributes empty
     if(attributes == null || !attributes.history) {
-        const speechText = toSSML("You have not started a study session yet.");
+        const speechText = "You have not started a study session yet.";
         return handlerInput.responseBuilder
-            .speak(speechText)
+            .speak(toSSML(speechText))
             .withSimpleCard('My Studies', speechText)
             .getResponse();
     }
@@ -179,23 +177,23 @@ const GetRecordsIntentHandler = {
     if(passedSubject) {
         var index = attributes.history.findIndex(x => x.subjectName == passedSubject);
         if(index == -1) {
-            speechText += toSSML(`You haven't studied ${passedSubject} yet.`);
+            speechText += `You haven't studied ${passedSubject} yet.`;
         } else {
             const record = attributes.history[index];
-            speechText += toSSML(`You studied ${record.subjectName} for \
-                            ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`);
+            speechText += `You studied ${record.subjectName} for \
+                          ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`;
         }
     } else {
-        speechText += toSSML("You have studied ");
+        speechText += "You have studied ";
         for(var i=0; i<attributes.history.length; i++) {
           const record = attributes.history[i];  
-          speechText += toSSML(`${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}\
-                        ${(i != attributes.history.length-2) ? (i == attributes.history.length-1) ? '. ' : ', ' : ', and '}`);
+          speechText += `${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}\
+                          ${(i != attributes.history.length-2) ? (i == attributes.history.length-1) ? '. ' : ', ' : ', and '}`;
         }
     }
   
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
@@ -217,15 +215,15 @@ const CurrentSessionIntentHandler = {
       // Retrieve UNIX
       const moment = require('moment');
       const currentSession = moment().format("X") - attributes.startTime;
-      speechText = toSSML(`You have been studying ${(attributes.currentSubject) ? attributes.currentSubject : ""}\
-                    for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`);
+      speechText = `You have been studying ${(attributes.currentSubject) ? attributes.currentSubject : ""}\
+                    for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`;
     } else {
       // You have no active sessions
-      speechText = toSSML("Active session not found.");
+      speechText = "Active session not found.";
     }
 
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
@@ -259,9 +257,9 @@ const CancelSessionIntentHandler = {
         .addConfirmIntentDirective()
         .getResponse();
     } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
-      const speechText = toSSML("Okay, I won't cancel your session.");
+      const speechText = "Okay, I won't cancel your session.";
       return handlerInput.responseBuilder
-        .speak(speechText)
+        .speak(toSSML(speechText))
         .withSimpleCard('My Studies', speechText)
         .getResponse();
     }
@@ -274,10 +272,10 @@ const CancelSessionIntentHandler = {
     attributesManager.setPersistentAttributes(attributes);
     await attributesManager.savePersistentAttributes();
 
-    const speechText = toSSML("Okay, I cancelled your session. You currently have no active sessions.");
+    const speechText = "Okay, I cancelled your session. You currently have no active sessions.";
 
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
@@ -289,13 +287,13 @@ const HelpIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'AMAZON.HelpIntent';
   },
   handle(handlerInput) {
-    const speechText = toSSML('I am your academic assistant. You can tell me to start, \
-                              stop, or cancel study sessions to keep track of your academic \
-                              pursuits. I can also tell your total study times if you ask \
-                              for your records.');
+    const speechText = 'I am your academic assistant. You can tell me to start, \
+                        stop, or cancel study sessions to keep track of your academic \
+                        pursuits. I can also tell your total study times if you ask \
+                        for your records.';
 
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .reprompt(speechText)
       .withSimpleCard('My Studies', speechText)
       .getResponse();
@@ -309,10 +307,10 @@ const CancelAndStopIntentHandler = {
         || handlerInput.requestEnvelope.request.intent.name === 'AMAZON.StopIntent');
   },
   handle(handlerInput) {
-    const speechText = toSSML("Bye bye");
+    const speechText = "Bye bye";
 
     return handlerInput.responseBuilder
-      .speak(speechText)
+      .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
       .getResponse();
   },
@@ -338,7 +336,7 @@ const ErrorHandler = {
 
     return handlerInput.responseBuilder
       .speak(toSSML('Sorry, I can\'t understand the command. Please say again.'))
-      .reprompt('Sorry, I can\'t understand the command. Please say again.')
+      .reprompt(toSSML('Sorry, I can\'t understand the command. Please say again.'))
       .getResponse();
   },
 };
