@@ -274,7 +274,7 @@ const CancelSessionIntentHandler = {
     attributesManager.setPersistentAttributes(attributes);
     await attributesManager.savePersistentAttributes();
 
-    const speechText = toSSML("Okay, I cancelled your current session. You currently have no active sessions.");
+    const speechText = toSSML("Okay, I cancelled your session. You currently have no active sessions.");
 
     return handlerInput.responseBuilder
       .speak(speechText)
