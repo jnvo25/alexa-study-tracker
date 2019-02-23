@@ -3,6 +3,13 @@
 
 const Alexa = require('ask-sdk');
 
+const MY_SCHEDULE = {
+  MAT1: [1,3,5],
+  MAT3: [1,3],
+  BIO1: [2,4],
+  CSC18: [3]
+}
+
 function toSSML (phrase) {
   return `<voice name="Emma"><lang xml:lang="en-GB"><prosody pitch="+0%">${phrase}</prosody></lang></voice>`;
 }
@@ -103,7 +110,11 @@ const StopSessionIntentHandler = {
 
     // Retrieve UNIX
     const moment = require('moment');
-    const stop = moment().format("X");
+    const nowUNIX = moment().format("X");
+    
+    // Initialize duration formatter
+    var momentDurationFormatSetup = require("moment-duration-format");
+    momentDurationFormatSetup(moment);
 
     // Check if session subject exists and prompt
     if(attributes.currentSubject == null && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
@@ -113,8 +124,21 @@ const StopSessionIntentHandler = {
     }
     attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
     
+    var subjectReference;
+    if(attributes.currentSubject == "programming") {
+      subjectReference = MY_SCHEDULE.CSC18;
+    } else if(attributes.currentSubject == "calculus") {
+      subjectReference = MY_SCHEDULE.MAT1;
+    } else if(attributes.currentSubject == "linear algebra") {
+      subjectReference = MY_SCHEDULE.MAT3;
+    } else if(attributes.currentSubject == "biology") {
+      subjectReference = MY_SCHEDULE.BIO1;
+    } else {
+      // Ask for subject again
+    }
+
     // Calculate time studied
-    const studyTime = stop - attributes.startTime;
+    const studyTime = nowUNIX - attributes.startTime;
 
     // Create history array in attributes if nonexistent
     attributes.history = attributes.history || [];
@@ -124,22 +148,50 @@ const StopSessionIntentHandler = {
       // Subject record to hold time
       const record = {
         subjectName: attributes.currentSubject,
-        totalTime: 0
+        totalTime: 0,
+        lastTimeUpdated: nowUNIX,
+        timeLeftToStudy: 0
       }
       attributes.history.push(record);
       index = attributes.history.length-1;
     }
     // Attach time
-    attributes.history[index].totalTime += studyTime; 
+    var currentRecord = attributes.history[index];
+    currentRecord.totalTime += studyTime; 
+
+    // If different day that last time updated, calculate classes in between
+    var nowMoment = moment.unix(nowUNIX);
+    var lastMoment = moment.unix(currentRecord.lastTimeUpdated);
+    if(nowMoment.diff(lastMoment, 'days') != 0) {
+      console.log(nowMoment.diff(lastMoment, 'days'));
+      require('moment-weekday-calc');
+      classes = nowMoment.weekdayCalc(lastMoment, subjectReference);
+
+      // If today same day as class, remove class
+      if(subjectReference.indexOf(nowMoment.isoWeekday()) != -1) {
+        --classes;
+      }
+      currentRecord.timeLeftToStudy += classes * 2 * 3600 - studyTime;
+    }
+
+    currentRecord.timeLeftToStudy = (currentRecord.timeLeftToStudy < studyTime) ? 0 : currentRecord.timeLeftToStudy - studyTime;
+
+
+    // Format durations
+    const studyDuration = moment.duration(studyTime, "seconds"). format("h [ hours,] m [minutes and ] s [ seconds]");
+    const toStudy = moment.duration(currentRecord.timeLeftToStudy, "seconds").format("h [ hours and ] m [ minutes.]");
 
     // Create speech text
-    // Okay I will stop the session
-    const speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
-                       for ${(studyTime>60) ? Math.floor(studyTime/60) + " minutes" : studyTime + " seconds"}.`;
+    var speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
+                       for ${studyDuration}. `;
+    if(currentRecord.timeLeftToStudy > 0) {speechText += `You have ${toStudy} left to study!`} else {
+      speechText += `You have finished studying ${attributes.currentSubject} for today. `;
+    };
 
     // Reset current statistics
     attributes.startTime = null;
     attributes.currentSubject = null;
+    currentRecord.lastTimeUpdated = nowUNIX;
 
     // Save attributes
     attributesManager.setPersistentAttributes(attributes);
