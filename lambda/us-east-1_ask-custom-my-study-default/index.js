@@ -266,9 +266,30 @@ const CurrentSessionIntentHandler = {
     if(attributes.startTime) {
       // Retrieve UNIX
       const moment = require('moment');
+      // Initialize duration formatter
+      var momentDurationFormatSetup = require("moment-duration-format");
+      momentDurationFormatSetup(moment);
+
       const currentSession = moment().format("X") - attributes.startTime;
+
+      // Format duration
+      const currentDuration = moment.duration(currentSession, "seconds"). format("h [ hours,] m [minutes and ] s [ seconds]");
+      
       speechText = `You have been studying ${(attributes.currentSubject) ? attributes.currentSubject : ""}\
-                    for ${(currentSession>60) ? Math.floor(currentSession/60) + " minutes" : currentSession + " seconds"}.`;
+                    for ${currentDuration}. `;
+
+      var index = attributes.history.findIndex(x => x.subjectName == attributes.currentSubject);
+      if(index != -1) {
+        // Attach time
+        var currentRecord = attributes.history[index];
+        const toStudy = moment.duration(currentRecord.timeLeftToStudy-currentSession, "seconds").format("h [ hours and ] m [ minutes.]");
+        if(currentRecord.timeLeftToStudy-currentSession > 0) {
+          speechText += `You have ${toStudy} left to study. `;
+        } else {
+          speechText += `Your ${attributes.currentSubject} study hours have been fulfilled for today`;
+        }
+      }
+
     } else {
       // You have no active sessions
       speechText = "Active session not found.";

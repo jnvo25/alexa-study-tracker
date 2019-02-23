@@ -184,11 +184,11 @@
                 "variations": [
                     {
                         "type": "PlainText",
-                        "value": "Mimi wants to know what you were studying. What have you been working on?"
+                        "value": "What have you been working on?"
                     },
                     {
                         "type": "PlainText",
-                        "value": "Mimi asks, what subject were you studying?"
+                        "value": "What subject were you studying?"
                     }
                 ]
             },
