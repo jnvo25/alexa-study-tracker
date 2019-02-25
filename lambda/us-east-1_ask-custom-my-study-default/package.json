@@ -13,6 +13,7 @@
     "ask-sdk-model": "^1.0.0",
     "moment": "^2.24.0",
     "moment-weekday-calc": "^1.1.4",
-    "moment-duration-format": "^2.2.2"
+    "moment-duration-format": "^2.2.2",
+    "deasync": "^0.1.14"
   }
 }

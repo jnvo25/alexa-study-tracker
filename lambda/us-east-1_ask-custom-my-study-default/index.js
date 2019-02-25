@@ -7,7 +7,8 @@ const MY_SCHEDULE = {
   MAT1: [1,3,5],
   MAT3: [1,3],
   BIO1: [2,4],
-  CSC18: [3]
+  CSC18: [3],
+  GUITAR: [7]
 }
 
 function toSSML (phrase) {
@@ -38,33 +39,47 @@ const StartSessionIntentHandler = {
   async handle(handlerInput) {
 
     // Retrieve UNIX
+    console.log("Retrieving UNIX time...");
     const moment = require('moment');
     const start = moment().format("X");
-
-    // Get or create attributes
-    const attributesManager = handlerInput.attributesManager;
-    const attributes = await attributesManager.getPersistentAttributes() || {};
     
-    // Check and deny if start time already exists
-    var speechText;
-    if(attributes.startTime) {
-      
-      speechText = `There is already a active session${(attributes.currentSubject) ? ` for ${attributes.currentSubject}` : ""}.`;
-      // TODO:: DO YOU WANT TO CANCEL IT?
-    } else {
-      // Check if user provided session subject
-      attributes.currentSubject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
-      // Write to file
-      attributes.startTime = start;
-      attributesManager.setPersistentAttributes(attributes);
-      await attributesManager.savePersistentAttributes();
-      if(attributes.currentSubject != null) {
-        speechText = `Okay, study session for ${attributes.currentSubject}, starting now`;
+    // Load existing attributes to edit
+    console.log("Importing DataManager...");
+    const DataManager = require('./DataManager');
+    // Once loaded attributes, check if session can be started and start if possible
+    var speechText = await DataManager(handlerInput).then(manager => {
+      var attributes = manager;
+      // Check if session active
+      console.log("Checking session if active...");
+      console.log(attributes.sessionActive);
+      if(!attributes.sessionActive) {
+        console.log("Session not active, setting attributes...");
+        attributes.currentSubject = handlerInput.requestEnvelope.request.intent.slots.subject.value;
+        attributes.startTime = start;
+        // Save into database
+        console.log("Saving to database...");
+        handlerInput.attributesManager.setPersistentAttributes(attributes);
+        handlerInput.attributesManager.savePersistentAttributes();
       } else {
-        speechText = "Okay, study session, starting now.";
+        console.log("Active session exists. Throwing...");
+        throw `There is already an active session${(attributes.currentSubject) ? ` for ${attributes.currentSubject} ` : ""}`;
+        // TODO:: DO YOU WANT TO CANCEL IT?
       }
-    }
-    // TODO:: GET TIMEZONE FOR ~ const speechText = `Session start recorded at ${moment().format("h:mm:ss a")}`;
+  
+      // Tell user success
+      console.log("Checking current subject...");
+      if(attributes.currentSubject) {
+        console.log("Current subject was given. Updating speechText...");
+        return `Okay, study session for ${attributes.currentSubject}, starting now`;
+      } else {
+        console.log("Current subject not found. Setting speech text...");
+        return `Okay, study session, starting now`;
+      }
+
+    }).catch(err => {
+      console.log("An error occured: " + err);
+      return `I cannot start a new session. ${err}. `;
+    });
 
     return handlerInput.responseBuilder
       .speak(toSSML(speechText))
@@ -125,7 +140,7 @@ const StopSessionIntentHandler = {
     attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
     
     var subjectReference;
-    if(attributes.currentSubject == "programming") {
+    if(attributes.currentSubject == "java") {
       subjectReference = MY_SCHEDULE.CSC18;
     } else if(attributes.currentSubject == "calculus") {
       subjectReference = MY_SCHEDULE.MAT1;
@@ -133,6 +148,8 @@ const StopSessionIntentHandler = {
       subjectReference = MY_SCHEDULE.MAT3;
     } else if(attributes.currentSubject == "biology") {
       subjectReference = MY_SCHEDULE.BIO1;
+    } else if(attributes.currentSubject == "guitar") {
+      subjectReference = MY_SCHEDULE.GUITAR;
     } else {
       // Ask for subject again
     }
@@ -191,6 +208,7 @@ const StopSessionIntentHandler = {
     // Reset current statistics
     attributes.startTime = null;
     attributes.currentSubject = null;
+    attributes.sessionActive = false;
     currentRecord.lastTimeUpdated = nowUNIX;
 
     // Save attributes
@@ -286,7 +304,7 @@ const CurrentSessionIntentHandler = {
         if(currentRecord.timeLeftToStudy-currentSession > 0) {
           speechText += `You have ${toStudy} left to study. `;
         } else {
-          speechText += `Your ${attributes.currentSubject} study hours have been fulfilled for today`;
+          speechText += `Your ${attributes.currentSubject} study requirement has been fulfilled for today`;
         }
       }
 

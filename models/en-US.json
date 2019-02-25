@@ -77,19 +77,19 @@
                         "how long have I studied {subject}",
                         "give me my session history",
                         "give me my records",
-                        "what are my sessions",
                         "what is my history",
                         "list my history",
                         "what are my records",
                         "list my records",
-                        "what have I studied",
-                        "list my sessions"
+                        "what have I studied"
                     ]
                 },
                 {
                     "name": "CurrentSessionIntent",
                     "slots": [],
                     "samples": [
+                        "what session is active",
+                        "is there a session active",
                         "is there a current session",
                         "is there an active session",
                         "what am I studying",
@@ -115,12 +115,33 @@
                     "values": [
                         {
                             "name": {
+                                "value": "test",
+                                "synonyms": [
+                                    "testing"
+                                ]
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Data Structures and Algorithms",
+                                "synonyms": [
+                                    "Java"
+                                ]
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Guitar"
+                            }
+                        },
+                        {
+                            "name": {
                                 "value": "Programming"
                             }
                         },
                         {
                             "name": {
-                                "value": "Field Botany"
+                                "value": "Biology"
                             }
                         },
                         {
