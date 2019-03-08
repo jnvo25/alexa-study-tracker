@@ -95,35 +95,8 @@ const StopSessionIntentHandler = {
   },
   async handle(handlerInput) {
         
-    // Get or create attributes
-    const attributesManager = handlerInput.attributesManager;
-    const attributes = await attributesManager.getPersistentAttributes() || {};
-
-    // Check if there is session active
-    if(!attributes.startTime) {
-      const speechText = "Active session not found.";
-      return handlerInput.responseBuilder
-        .speak(toSSML(speechText))
-        .withSimpleCard('My Studies', speechText)
-        .getResponse();
-    }
-
-    // Check confirmation
-    if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
-      return handlerInput.responseBuilder
-        .speak(toSSML("You sure you want to stop?"))
-        .reprompt(toSSML("Are you sure?"))
-        .addConfirmIntentDirective()
-        .getResponse();
-    } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
-      const speechText = "Okay, cancelling your request to end.";
-      return handlerInput.responseBuilder
-        .speak(toSSML(speechText))
-        .withSimpleCard('My Studies', speechText)
-        .getResponse();
-    }
-
     // Retrieve UNIX
+    console.log("Retrieving UNIX time...");
     const moment = require('moment');
     const nowUNIX = moment().format("X");
     
@@ -131,89 +104,266 @@ const StopSessionIntentHandler = {
     var momentDurationFormatSetup = require("moment-duration-format");
     momentDurationFormatSetup(moment);
 
-    // Check if session subject exists and prompt
-    if(attributes.currentSubject == null && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
-      return handlerInput.responseBuilder
-        .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
-        .getResponse();
-    }
-    attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
+    // Load existing attributes to edit
+    console.log("Importing DataManager...");
+    const DataManager = require('./DataManager');
+    // Once loaded attributes, check if session can be started and start if possible
+    var speechText = await DataManager(handlerInput).then(manager => {
+      if(manager.startTime == null) {
+        throw 'THERE ARE NO SESSIONS TO CANCEL';
+      }
+      var attributes = manager;
+      // Check if there is a session active
+      if(!attributes.sessionActive) { // If no session is active
+        throw 'There is no session active.';
+      }
+
+      // Check for user confirmation
+      if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
+        throw 'CONFIRMATION ERROR';
+      } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
+        throw 'CONFIRMATION DENIED';
+      }
+
+      // Check if subject exists
+      if(attributes.currentSubject == null && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
+        throw 'SUBJECT MISSING';
+      }
+      attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
     
-    var subjectReference;
-    if(attributes.currentSubject == "java") {
-      subjectReference = MY_SCHEDULE.CSC18;
-    } else if(attributes.currentSubject == "calculus") {
-      subjectReference = MY_SCHEDULE.MAT1;
-    } else if(attributes.currentSubject == "linear algebra") {
-      subjectReference = MY_SCHEDULE.MAT3;
-    } else if(attributes.currentSubject == "biology") {
-      subjectReference = MY_SCHEDULE.BIO1;
-    } else if(attributes.currentSubject == "guitar") {
-      subjectReference = MY_SCHEDULE.GUITAR;
-    } else {
-      // Ask for subject again
-    }
-
-    // Calculate time studied
-    const studyTime = nowUNIX - attributes.startTime;
-
-    // Create history array in attributes if nonexistent
-    attributes.history = attributes.history || [];
-    // Check if current subject has been studied before and create if new
-    var index = attributes.history.findIndex(x => x.subjectName == attributes.currentSubject);
-    if(index == -1) {
-      // Subject record to hold time
-      const record = {
-        subjectName: attributes.currentSubject,
-        totalTime: 0,
-        lastTimeUpdated: nowUNIX,
-        timeLeftToStudy: 0
+      var subjectReference;
+      if(attributes.currentSubject == "java") {
+        subjectReference = MY_SCHEDULE.CSC18;
+      } else if(attributes.currentSubject == "calculus") {
+        subjectReference = MY_SCHEDULE.MAT1;
+      } else if(attributes.currentSubject == "linear algebra") {
+        subjectReference = MY_SCHEDULE.MAT3;
+      } else if(attributes.currentSubject == "biology") {
+        subjectReference = MY_SCHEDULE.BIO1;
+      } else if(attributes.currentSubject == "guitar") {
+        subjectReference = MY_SCHEDULE.GUITAR;
+      } else if(attributes.currentSubject == "test") {
+        subjectReference = [1];
+      } else {
+        throw 'SUBJECT ERROR';
+        // TODO:: Ask for subject again
       }
-      attributes.history.push(record);
-      index = attributes.history.length-1;
-    }
-    // Attach time
-    var currentRecord = attributes.history[index];
-    currentRecord.totalTime += studyTime; 
 
-    // If different day that last time updated, calculate classes in between
-    var nowMoment = moment.unix(nowUNIX);
-    var lastMoment = moment.unix(currentRecord.lastTimeUpdated);
-    if(nowMoment.diff(lastMoment, 'days') != 0) {
-      console.log(nowMoment.diff(lastMoment, 'days'));
-      require('moment-weekday-calc');
-      classes = nowMoment.weekdayCalc(lastMoment, subjectReference);
+      // Calculate time studied
+      const studyTime = nowUNIX - attributes.startTime;
 
-      // If today same day as class, remove class
-      if(subjectReference.indexOf(nowMoment.isoWeekday()) != -1) {
-        --classes;
+      // Create history array in attributes if nonexistent
+      attributes.history = attributes.history || [];
+      // Check if current subject has been studied before and create if new
+      var index = attributes.history.findIndex(x => x.subjectName == attributes.currentSubject);
+      if(index == -1) {
+        // Subject record to hold time
+        const record = {
+          subjectName: attributes.currentSubject,
+          totalTime: 0,
+          lastTimeUpdated: nowUNIX,
+          timeLeftToStudy: 0
+        }
+        attributes.history.push(record);
+        index = attributes.history.length-1;
       }
-      currentRecord.timeLeftToStudy += classes * 2 * 3600 - studyTime;
+      // Attach time
+      var currentRecord = attributes.history[index];
+      currentRecord.totalTime += studyTime; 
+
+      // If different day that last time updated, calculate classes in between
+      var nowMoment = moment.unix(nowUNIX);
+      var lastMoment = moment.unix(currentRecord.lastTimeUpdated);
+      if(nowMoment.diff(lastMoment, 'days') != 0) {
+        console.log(nowMoment.diff(lastMoment, 'days'));
+        require('moment-weekday-calc');
+        classes = nowMoment.weekdayCalc(lastMoment, subjectReference);
+
+        // If today same day as class, remove class
+        if(subjectReference.indexOf(nowMoment.isoWeekday()) != -1) {
+          --classes;
+        }
+        currentRecord.timeLeftToStudy += classes * 2 * 3600 - studyTime;
+      }
+
+      currentRecord.timeLeftToStudy = (currentRecord.timeLeftToStudy < studyTime) ? 0 : currentRecord.timeLeftToStudy - studyTime;
+
+
+      // Format durations
+      const studyDuration = moment.duration(studyTime, "seconds"). format("h [ hours,] m [minutes and ] s [ seconds]");
+      const toStudy = moment.duration(currentRecord.timeLeftToStudy, "seconds").format("h [ hours and ] m [ minutes.]");
+
+      // Create speech text
+      var speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
+                          for ${studyDuration}. `;
+      if(currentRecord.timeLeftToStudy > 0) {speechText += `You have ${toStudy} left to study!`} else {
+        speechText += `You have finished studying ${attributes.currentSubject} for today. `;
+      };
+
+      // Reset current statistics
+      attributes.startTime = null;
+      attributes.currentSubject = null;
+      attributes.sessionActive = false;
+      currentRecord.lastTimeUpdated = nowUNIX;
+      
+      // Save attributes
+      handlerInput.attributesManager.setPersistentAttributes(attributes);
+      handlerInput.attributesManager.savePersistentAttributes();
+
+      return speechText;
+      
+    }).catch(err => {
+      console.log("An error was thrown: " + err);
+      if(err == 'CONFIRMATION ERROR' || err == 'CONFIRMATION DENIED' || err == 'SUBJECT MISSING') {return err;}
+      return `I cannot end your session. ${err}. `;
+    });
+
+    if(speechText == 'CONFIRMATION ERROR') {
+      return handlerInput.responseBuilder
+        .speak(toSSML("You sure you want to stop?"))
+        .reprompt(toSSML("Are you sure?"))
+        .addConfirmIntentDirective()
+        .getResponse();
+    } else if(speechText == 'CONFIRMATION DENIED') {
+      const speechText = "Okay, cancelling your request to end.";
+      return handlerInput.responseBuilder
+        .speak(toSSML(speechText))
+        .withSimpleCard('My Studies', speechText)
+        .getResponse();
+    } else if(speechText == 'SUBJECT MISSING') {
+      return handlerInput.responseBuilder
+          .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
+          .getResponse();
     }
 
-    currentRecord.timeLeftToStudy = (currentRecord.timeLeftToStudy < studyTime) ? 0 : currentRecord.timeLeftToStudy - studyTime;
 
 
-    // Format durations
-    const studyDuration = moment.duration(studyTime, "seconds"). format("h [ hours,] m [minutes and ] s [ seconds]");
-    const toStudy = moment.duration(currentRecord.timeLeftToStudy, "seconds").format("h [ hours and ] m [ minutes.]");
 
-    // Create speech text
-    var speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
-                       for ${studyDuration}. `;
-    if(currentRecord.timeLeftToStudy > 0) {speechText += `You have ${toStudy} left to study!`} else {
-      speechText += `You have finished studying ${attributes.currentSubject} for today. `;
-    };
 
-    // Reset current statistics
-    attributes.startTime = null;
-    attributes.currentSubject = null;
-    attributes.sessionActive = false;
-    currentRecord.lastTimeUpdated = nowUNIX;
 
-    // Save attributes
-    attributesManager.setPersistentAttributes(attributes);
-    await attributesManager.savePersistentAttributes();
+
+
+
+
+    // // Get or create attributes
+    // const attributesManager = handlerInput.attributesManager;
+    // const attributes = await attributesManager.getPersistentAttributes() || {};
+
+    // // Check if there is session active
+    // if(!attributes.startTime) {
+    //   const speechText = "Active session not found.";
+    //   return handlerInput.responseBuilder
+    //     .speak(toSSML(speechText))
+    //     .withSimpleCard('My Studies', speechText)
+    //     .getResponse();
+    // }
+
+    // // Check confirmation
+    // if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
+    //   return handlerInput.responseBuilder
+    //     .speak(toSSML("You sure you want to stop?"))
+    //     .reprompt(toSSML("Are you sure?"))
+    //     .addConfirmIntentDirective()
+    //     .getResponse();
+    // } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
+    //   const speechText = "Okay, cancelling your request to end.";
+    //   return handlerInput.responseBuilder
+    //     .speak(toSSML(speechText))
+    //     .withSimpleCard('My Studies', speechText)
+    //     .getResponse();
+    // }
+
+    // // Retrieve UNIX
+    // const moment = require('moment');
+    // const nowUNIX = moment().format("X");
+    
+    // // Initialize duration formatter
+    // var momentDurationFormatSetup = require("moment-duration-format");
+    // momentDurationFormatSetup(moment);
+
+    // // Check if session subject exists and prompt
+    // if(attributes.currentSubject == null && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
+    //   return handlerInput.responseBuilder
+    //     .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
+    //     .getResponse();
+    // }
+    // attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
+    
+    // var subjectReference;
+    // if(attributes.currentSubject == "java") {
+    //   subjectReference = MY_SCHEDULE.CSC18;
+    // } else if(attributes.currentSubject == "calculus") {
+    //   subjectReference = MY_SCHEDULE.MAT1;
+    // } else if(attributes.currentSubject == "linear algebra") {
+    //   subjectReference = MY_SCHEDULE.MAT3;
+    // } else if(attributes.currentSubject == "biology") {
+    //   subjectReference = MY_SCHEDULE.BIO1;
+    // } else if(attributes.currentSubject == "guitar") {
+    //   subjectReference = MY_SCHEDULE.GUITAR;
+    // } else {
+    //   // Ask for subject again
+    // }
+
+    // // Calculate time studied
+    // const studyTime = nowUNIX - attributes.startTime;
+
+    // // Create history array in attributes if nonexistent
+    // attributes.history = attributes.history || [];
+    // // Check if current subject has been studied before and create if new
+    // var index = attributes.history.findIndex(x => x.subjectName == attributes.currentSubject);
+    // if(index == -1) {
+    //   // Subject record to hold time
+    //   const record = {
+    //     subjectName: attributes.currentSubject,
+    //     totalTime: 0,
+    //     lastTimeUpdated: nowUNIX,
+    //     timeLeftToStudy: 0
+    //   }
+    //   attributes.history.push(record);
+    //   index = attributes.history.length-1;
+    // }
+    // // Attach time
+    // var currentRecord = attributes.history[index];
+    // currentRecord.totalTime += studyTime; 
+
+    // // If different day that last time updated, calculate classes in between
+    // var nowMoment = moment.unix(nowUNIX);
+    // var lastMoment = moment.unix(currentRecord.lastTimeUpdated);
+    // if(nowMoment.diff(lastMoment, 'days') != 0) {
+    //   console.log(nowMoment.diff(lastMoment, 'days'));
+    //   require('moment-weekday-calc');
+    //   classes = nowMoment.weekdayCalc(lastMoment, subjectReference);
+
+    //   // If today same day as class, remove class
+    //   if(subjectReference.indexOf(nowMoment.isoWeekday()) != -1) {
+    //     --classes;
+    //   }
+    //   currentRecord.timeLeftToStudy += classes * 2 * 3600 - studyTime;
+    // }
+
+    // currentRecord.timeLeftToStudy = (currentRecord.timeLeftToStudy < studyTime) ? 0 : currentRecord.timeLeftToStudy - studyTime;
+
+
+    // // Format durations
+    // const studyDuration = moment.duration(studyTime, "seconds"). format("h [ hours,] m [minutes and ] s [ seconds]");
+    // const toStudy = moment.duration(currentRecord.timeLeftToStudy, "seconds").format("h [ hours and ] m [ minutes.]");
+
+    // // Create speech text
+    // var speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
+    //                    for ${studyDuration}. `;
+    // if(currentRecord.timeLeftToStudy > 0) {speechText += `You have ${toStudy} left to study!`} else {
+    //   speechText += `You have finished studying ${attributes.currentSubject} for today. `;
+    // };
+
+    // // Reset current statistics
+    // attributes.startTime = null;
+    // attributes.currentSubject = null;
+    // attributes.sessionActive = false;
+    // currentRecord.lastTimeUpdated = nowUNIX;
+
+    // // Save attributes
+    // attributesManager.setPersistentAttributes(attributes);
+    // await attributesManager.savePersistentAttributes();
     
     return handlerInput.responseBuilder
       .speak(toSSML(speechText))

@@ -17,12 +17,12 @@ async function getManagerPromise(handlerinput) {
       } else {
         reject(("Something went wrong pulling up your info from the database. "));
       }
-    }).then(handler => {
+    }).then(handler => {  // Retreive data
         console.log("Getting data from database...");
         // Get or create attributes
         const data = handler.attributesManager.getPersistentAttributes() || {};
         return data;
-    }).then(data => {
+    }).then(data => { // Check if there is session active
         console.log("Checking if session is active to set time...");
         // Check if session active
         if(data.startTime) {
@@ -30,13 +30,16 @@ async function getManagerPromise(handlerinput) {
             DataManager.startTime = data.startTime;
             DataManager.sessionActive = true;
         }
+        return data;
+      }).then(data => { // Check if subject is passed
         console.log("Check if user passed a subject...");
-        // Check if user provided subject
         if(data.currentSubject) {
           console.log("Subject found. Saving into DataManager...");
           DataManager.currentSubject = data.currentSubject;
         }
-        // Check if history is not empty
+        console.log(DataManager.sessionActive);
+        return data;
+      }).then(data => { // Check if history not empty and return
         console.log("Checking if user has past sessions...");
         if(data.history) {
           console.log("Passed sessions found. Adding to DataManager... ");
