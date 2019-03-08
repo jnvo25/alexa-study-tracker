@@ -23,7 +23,7 @@
             "codeUri": "lambda/us-east-1_ask-custom-my-study-default",
             "functionName": "ask-custom-my-study-default",
             "handler": "index.handler",
-            "revisionId": "5fadeebe-57bc-42c1-91e0-bb5fa691b12e",
+            "revisionId": "00fc82bf-13e4-49aa-ad36-0c0e651d60d0",
             "runtime": "nodejs8.10"
           }
         ]
