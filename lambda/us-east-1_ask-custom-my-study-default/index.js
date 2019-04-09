@@ -2,7 +2,7 @@
 /* eslint-disable  no-console */
 
 const Alexa = require('ask-sdk');
-const myDataManager = new require('./DataManager.js')();
+const DataManager = require('./DataManager.js');
 
 function toSSML (phrase) {
   return `<voice name="Emma"><lang xml:lang="en-GB"><prosody pitch="+0%">${phrase}</prosody></lang></voice>`;
@@ -40,7 +40,7 @@ const StartSessionIntentHandler = {
     var subject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
 
     // Load existing attributes to edit
-    console.log("Importing DataManager...");
+    console.log("Initializing DataManager...");
     myDataManager = new DataManager();
     await myDataManager.initialize(handlerInput);
     const startSuccess = await myDataManager.startSession(start);
@@ -73,6 +73,7 @@ const StopSessionIntentHandler = {
     
     // Create data manager
     console.log("Initializing DataManager...");
+    myDataManager = new DataManager();
     await myDataManager.initialize(handlerInput);
 
     // See if user gave subject
