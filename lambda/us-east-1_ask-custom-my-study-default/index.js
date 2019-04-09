@@ -2,14 +2,7 @@
 /* eslint-disable  no-console */
 
 const Alexa = require('ask-sdk');
-
-const MY_SCHEDULE = {
-  MAT1: [1,3,5],
-  MAT3: [1,3],
-  BIO1: [2,4],
-  CSC18: [3],
-  GUITAR: [7]
-}
+const myDataManager = new require('./DataManager.js')();
 
 function toSSML (phrase) {
   return `<voice name="Emma"><lang xml:lang="en-GB"><prosody pitch="+0%">${phrase}</prosody></lang></voice>`;
@@ -42,44 +35,27 @@ const StartSessionIntentHandler = {
     console.log("Retrieving UNIX time...");
     const moment = require('moment');
     const start = moment().format("X");
-    
+
+    // See if user gave subject
+    var subject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
+
     // Load existing attributes to edit
     console.log("Importing DataManager...");
-    const DataManager = require('./DataManager');
-    // Once loaded attributes, check if session can be started and start if possible
-    var speechText = await DataManager(handlerInput).then(manager => {
-      var attributes = manager;
-      // Check if session active
-      console.log("Checking session if active...");
-      console.log(attributes.sessionActive);
-      if(!attributes.sessionActive) {
-        console.log("Session not active, setting attributes...");
-        attributes.currentSubject = handlerInput.requestEnvelope.request.intent.slots.subject.value;
-        attributes.startTime = start;
-        // Save into database
-        console.log("Saving to database...");
-        handlerInput.attributesManager.setPersistentAttributes(attributes);
-        handlerInput.attributesManager.savePersistentAttributes();
+    myDataManager = new DataManager();
+    await myDataManager.initialize(handlerInput);
+    const startSuccess = await myDataManager.startSession(start);
+    
+    var speechText;
+    if(startSuccess) {
+      if(subject) {
+        await myDataManager.setSubject(subject);
+        speechText = `Okay, session started for ${subject}`;
       } else {
-        console.log("Active session exists. Throwing...");
-        throw `There is already an active session${(attributes.currentSubject) ? ` for ${attributes.currentSubject} ` : ""}`;
-        // TODO:: DO YOU WANT TO CANCEL IT?
+        speechText = 'Okay, study session started.';
       }
-  
-      // Tell user success
-      console.log("Checking current subject...");
-      if(attributes.currentSubject) {
-        console.log("Current subject was given. Updating speechText...");
-        return `Okay, study session for ${attributes.currentSubject}, starting now`;
-      } else {
-        console.log("Current subject not found. Setting speech text...");
-        return `Okay, study session, starting now`;
-      }
-
-    }).catch(err => {
-      console.log("An error occured: " + err);
-      return `I cannot start a new session. ${err}. `;
-    });
+    } else {
+      speechText = 'There is already a session active.';
+    }
 
     return handlerInput.responseBuilder
       .speak(toSSML(speechText))
@@ -94,146 +70,44 @@ const StopSessionIntentHandler = {
       && handlerInput.requestEnvelope.request.intent.name === 'StopSessionIntent';
   },
   async handle(handlerInput) {
-        
+    
+    // Create data manager
+    console.log("Initializing DataManager...");
+    await myDataManager.initialize(handlerInput);
+
+    // See if user gave subject
+    console.log("Check for subject...");
+    var subject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
+    // Set subject if not already set
+    if(subject) {
+      await myDataManager.setSubject(subject); 
+    } else {
+      // If subject is missing, check data manager
+      console.log("Subject not passed. Checking attributes...");
+      // If subject missing from data manager, ask for subject
+      if(!myDataManager.hasSubject()) {
+        console.log("Reprompting for subject");
+        return handlerInput.responseBuilder
+          .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
+          .getResponse();
+      } else {
+        console.log("There is already a session subject recorded...");
+      }
+    }
+    
     // Retrieve UNIX
     console.log("Retrieving UNIX time...");
     const moment = require('moment');
     const nowUNIX = moment().format("X");
     
-    // Initialize duration formatter
-    var momentDurationFormatSetup = require("moment-duration-format");
-    momentDurationFormatSetup(moment);
-
-    // Load existing attributes to edit
-    console.log("Importing DataManager...");
-    const DataManager = require('./DataManager');
-    // Once loaded attributes, check if session can be started and start if possible
-    var speechText = await DataManager(handlerInput).then(manager => {
-      if(manager.startTime == null) {
-        throw 'THERE ARE NO SESSIONS TO STOP';
-      }
-      var attributes = manager;
-      // Check if there is a session active
-      if(!attributes.sessionActive) { // If no session is active
-        throw 'There is no session active.';
-      }
-
-      // Check for user confirmation
-      if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'NONE') {
-        throw 'CONFIRMATION ERROR';
-      } else if(handlerInput.requestEnvelope.request.intent.confirmationStatus === 'DENIED') {
-        throw 'CONFIRMATION DENIED';
-      }
-
-      // Check if subject exists
-      if(attributes.currentSubject == null && handlerInput.requestEnvelope.request.dialogState === 'IN_PROGRESS') {
-        throw 'SUBJECT MISSING';
-      }
-      attributes.currentSubject = attributes.currentSubject || handlerInput.requestEnvelope.request.intent.slots.subject.value;
+    console.log("Stopping session...");    
+    const stopSuccess = await myDataManager.stopSession(nowUNIX);
     
-      var subjectReference;
-      if(attributes.currentSubject == "java") {
-        subjectReference = MY_SCHEDULE.CSC18;
-      } else if(attributes.currentSubject == "calculus") {
-        subjectReference = MY_SCHEDULE.MAT1;
-      } else if(attributes.currentSubject == "linear algebra") {
-        subjectReference = MY_SCHEDULE.MAT3;
-      } else if(attributes.currentSubject == "biology") {
-        subjectReference = MY_SCHEDULE.BIO1;
-      } else if(attributes.currentSubject == "guitar") {
-        subjectReference = MY_SCHEDULE.GUITAR;
-      } else if(attributes.currentSubject == "test") {
-        subjectReference = [1];
-      } else {
-        throw 'SUBJECT ERROR';
-        // TODO:: Ask for subject again
-      }
-
-      // Calculate time studied
-      const studyTime = nowUNIX - attributes.startTime;
-
-      // Create history array in attributes if nonexistent
-      attributes.history = attributes.history || [];
-      // Check if current subject has been studied before and create if new
-      var index = attributes.history.findIndex(x => x.subjectName == attributes.currentSubject);
-      if(index == -1) {
-        // Subject record to hold time
-        const record = {
-          subjectName: attributes.currentSubject,
-          totalTime: 0,
-          lastTimeUpdated: nowUNIX,
-          timeLeftToStudy: 0
-        }
-        attributes.history.push(record);
-        index = attributes.history.length-1;
-      }
-      // Attach time
-      var currentRecord = attributes.history[index];
-      currentRecord.totalTime += studyTime; 
-
-      // If different day that last time updated, calculate classes in between
-      var nowMoment = moment.unix(nowUNIX);
-      var lastMoment = moment.unix(currentRecord.lastTimeUpdated);
-      if(nowMoment.diff(lastMoment, 'days') != 0) {
-        console.log(nowMoment.diff(lastMoment, 'days'));
-        require('moment-weekday-calc');
-        classes = nowMoment.weekdayCalc(lastMoment, subjectReference);
-
-        // If today same day as class, remove class
-        if(subjectReference.indexOf(nowMoment.isoWeekday()) != -1) {
-          --classes;
-        }
-        currentRecord.timeLeftToStudy += classes * 2 * 3600 - studyTime;
-      }
-
-      currentRecord.timeLeftToStudy = (currentRecord.timeLeftToStudy < studyTime) ? 0 : currentRecord.timeLeftToStudy - studyTime;
-
-
-      // Format durations
-      const studyDuration = moment.duration(studyTime, "seconds"). format("h [ hours,] m [minutes and ] s [ seconds]");
-      const toStudy = moment.duration(currentRecord.timeLeftToStudy, "seconds").format("h [ hours and ] m [ minutes.]");
-
-      // Create speech text
-      var speechText = `Okay, stopping your study session. You have been studying ${attributes.currentSubject} \
-                          for ${studyDuration}. `;
-      if(currentRecord.timeLeftToStudy > 0) {speechText += `You have ${toStudy} left to study!`} else {
-        speechText += `You have finished studying ${attributes.currentSubject} for today. `;
-      };
-
-      // Reset current statistics
-      attributes.startTime = null;
-      attributes.currentSubject = null;
-      attributes.sessionActive = false;
-      currentRecord.lastTimeUpdated = nowUNIX;
-      
-      // Save attributes
-      handlerInput.attributesManager.setPersistentAttributes(attributes);
-      handlerInput.attributesManager.savePersistentAttributes();
-
-      return speechText;
-      
-    }).catch(err => {
-      console.log("An error was thrown: " + err);
-      if(err == 'CONFIRMATION ERROR' || err == 'CONFIRMATION DENIED' || err == 'SUBJECT MISSING') {return err;}
-      return `I cannot end your session. ${err}. `;
-    });
-
-    if(speechText == 'CONFIRMATION ERROR') {
-      return handlerInput.responseBuilder
-        .speak(toSSML("You sure you want to stop?"))
-        .reprompt(toSSML("Are you sure?"))
-        .addConfirmIntentDirective()
-        .getResponse();
-    } else if(speechText == 'CONFIRMATION DENIED') {
-      const speechText = "Okay, cancelling your request to end.";
-      return handlerInput.responseBuilder
-        .speak(toSSML(speechText))
-        .withSimpleCard('My Studies', speechText)
-        .getResponse();
-    } else if(speechText == 'SUBJECT MISSING') {
-      return handlerInput.responseBuilder
-          .addDelegateDirective(handlerInput.requestEnvelope.request.intent)
-          .getResponse();
+    var speechText;
+    if(stopSuccess) {
+      speechText = (subject) ? `Okay, study session stopped for ${subject}` : "Okay, study session stopped.";
+    } else {
+      speechText = 'Unable to stop session. An error occured.';
     }
 
     return handlerInput.responseBuilder
