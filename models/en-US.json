@@ -69,9 +69,18 @@
                         {
                             "name": "subject",
                             "type": "Subjects"
+                        },
+                        {
+                            "name": "period",
+                            "type": "Period"
                         }
                     ],
                     "samples": [
+                        "how long have I been studying {subject} {period}",
+                        "What have I studied {period}",
+                        "how long have I studied {period}",
+                        "tell me how long I studied {subject} {period}",
+                        "tell me how long I studied {period}",
                         "tell me how long I studied {subject}",
                         "tell me my history",
                         "how long have I studied {subject}",
@@ -152,6 +161,29 @@
                         {
                             "name": {
                                 "value": "Linear Algebra"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Period",
+                    "values": [
+                        {
+                            "id": "2592000",
+                            "name": {
+                                "value": "This Month"
+                            }
+                        },
+                        {
+                            "id": "604800",
+                            "name": {
+                                "value": "This Week"
+                            }
+                        },
+                        {
+                            "id": "86400",
+                            "name": {
+                                "value": "Today"
                             }
                         }
                     ]

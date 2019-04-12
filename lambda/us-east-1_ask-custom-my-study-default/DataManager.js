@@ -117,6 +117,41 @@ DataManager.prototype.setSubject = async function(subject) {
   return promise;
 }
 
+DataManager.prototype.getRecords = async function(subject, period, currentTime) {
+  var promise = await new Promise(function (resolve, reject) {
+    console.log("Checking if session active...");
+    if (currentTime) {
+      resolve();
+    } else {
+      reject(("No time was passed. "));
+    }
+  }).then(() => {
+    var result = 0;
+    console.log("Iterating through history...");
+    for(var i=0; i<this.userData.history.length; i++) {
+      var current = this.userData.history[i];
+      // Get desired subject
+      console.log("Checking if subject matches...");
+      if(!subject || subject == current.subject) {
+        // Get desired period
+        console.log("Iterating record history...");
+        for(var j=0; j<current.recordHistory.length; j++) {
+          console.log("Checking if within period...");
+          if(!period || currentTime - current.recordHistory[j].date <= period) {
+            console.log("Adding to total...");
+            result += current.recordHistory[j].studyTime;
+          }
+        }
+      }
+    }
+    return result;
+  }).catch(err => {
+    console.log("An error has occured in stop session function: " + err);
+    return -9000;
+  });
+  return promise;
+}
+
 DataManager.prototype.stopSession = async function(endTime) {
   // Calculate time studied
   console.log("Creating record item...");
@@ -128,10 +163,9 @@ DataManager.prototype.stopSession = async function(endTime) {
   }
 
   // Make record item
-  const record = {
+  const sessionRecord = {
     studyTime: studyTime,
     date: endTime,
-    subject: this.userData.currentSubject
   }
 
   const sessionStatus = this.userData.sessionActive;
@@ -144,8 +178,32 @@ DataManager.prototype.stopSession = async function(endTime) {
     }
   }).then(() => {
     // Attach data to userData history
-    this.userData.history.push(record);
+    // Check if record exists
+    var subjectIndex = -1;
+    console.log("Looking through history for records...");
+    for(var i=0; i < this.userData.history.length; i++) {
+      if(this.userData.history[i].subject == this.userData.currentSubject) {
+        subjectIndex = i;
+        break;
+      }
+    }
+  
+    // If record doesnt exist create new otherwise append    
+    if(subjectIndex < 0) {
+      console.log("Creating new record...");
+      const record = {
+        subject: this.userData.currentSubject,
+        recordHistory: [sessionRecord],
+        total: studyTime
+      }
+      this.userData.history.push(record);
+    } else {
+      console.log("Adding to existing record...");
+      this.userData.history[subjectIndex].recordHistory.push(sessionRecord);
+      this.userData.history[subjectIndex].total += studyTime;
+    }
 
+    // Reset session details
     this.reset();
 
   }).then(() => {

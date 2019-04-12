@@ -125,39 +125,45 @@ const GetRecordsIntentHandler = {
   },
   async handle(handlerInput) {
         
-    // Get or create attributes
-    const attributesManager = handlerInput.attributesManager;
-    const attributes = await attributesManager.getPersistentAttributes() || null;
 
-    // Check if attributes empty
-    if(attributes == null || !attributes.history) {
-        const speechText = "You have not started a study session yet.";
-        return handlerInput.responseBuilder
-            .speak(toSSML(speechText))
-            .withSimpleCard('My Studies', speechText)
-            .getResponse();
-    }
+    // Retrieve UNIX
+    console.log("Retrieving UNIX time...");
+    const moment = require('moment');
+    const currentTime = moment().format("X");
 
-    var speechText = "";
-    const passedSubject = handlerInput.requestEnvelope.request.intent.slots.subject.value;
-    if(passedSubject) {
-        var index = attributes.history.findIndex(x => x.subjectName == passedSubject);
-        if(index == -1) {
-            speechText += `You haven't studied ${passedSubject} yet.`;
-        } else {
-            const record = attributes.history[index];
-            speechText += `You studied ${record.subjectName} for \
-                          ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}.`;
-        }
+    // See if user gave subject
+    const subject = handlerInput.requestEnvelope.request.intent.slots.subject.value || null;
+    const period = handlerInput.requestEnvelope.request.intent.slots.period.value || null;
+    var timeSeconds;
+    if(period) {
+      timeSeconds = handlerInput.requestEnvelope.request.intent.slots.period.resolutions.resolutionsPerAuthority[0].values[0].value.id || null;
     } else {
-        speechText += "You have studied ";
-        for(var i=0; i<attributes.history.length; i++) {
-          const record = attributes.history[i];  
-          speechText += `${record.subjectName} for ${(record.totalTime>60) ? Math.floor(record.totalTime/60) + " minutes" : record.totalTime + " seconds"}\
-                          ${(i != attributes.history.length-2) ? (i == attributes.history.length-1) ? '. ' : ', ' : ', and '}`;
-        }
+      timeSeconds = null;
     }
-  
+
+    // Load existing attributes to edit
+    console.log("Initializing DataManager...");
+    myDataManager = new DataManager();
+    await myDataManager.initialize(handlerInput);
+    console.log("Getting records...");
+    var time = await myDataManager.getRecords(subject, timeSeconds, currentTime);
+    console.log(time);
+    console.log("Creating time string...");
+    var timeString = `${(time>60) ? Math.floor(time/60) + " minutes" : time + " seconds"}. `;
+    console.log(timeString);
+    var speechText;
+    console.log("Choosing speech text pathway...");
+    if(subject) {
+      if(period) {
+        speechText = `You have been studying ${subject} ${period} for ${timeString}. `;
+      } else {
+        speechText =  `You have studying ${subject} for ${timeString}. `;
+      }
+    } else if(period) {
+      speechText = `You have studying ${period} for ${timeString}. `;
+    } else {
+      speechText = `You have studied for ${timeString}. `;
+    }
     return handlerInput.responseBuilder
       .speak(toSSML(speechText))
       .withSimpleCard('My Studies', speechText)
